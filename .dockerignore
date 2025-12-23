@@ -1,0 +1,26 @@
+# Build artifacts
+bot
+server
+
+# Go cache
+**/pkg/
+**/bin/
+
+# Development files
+.air.toml
+tmp/
+logs/
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.example
+
+# Documentation
+*.md
+
+# VS Code
+.vscode
