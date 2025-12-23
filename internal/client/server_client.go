@@ -16,6 +16,8 @@ type ServerClient struct {
 	baseURL    string
 	botSecret  string
 	httpClient *http.Client
+	maxRetries int
+	retryDelay time.Duration
 }
 
 func NewServerClient(baseURL, botSecret string) *ServerClient {
@@ -25,9 +27,53 @@ func NewServerClient(baseURL, botSecret string) *ServerClient {
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		maxRetries: 3,
+		retryDelay: 1 * time.Second,
 	}
 	log.Printf("[CLIENT] Initialized ServerClient with URL: %s", baseURL)
 	return client
+}
+
+// doWithRetry executes an HTTP request with retry logic
+func (c *ServerClient) doWithRetry(req *http.Request) (*http.Response, error) {
+	var resp *http.Response
+	var err error
+
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		resp, err = c.httpClient.Do(req)
+
+		// Success - return immediately
+		if err == nil && resp.StatusCode < 500 {
+			return resp, nil
+		}
+
+		// Last attempt - return error
+		if attempt == c.maxRetries {
+			if err != nil {
+				log.Printf("[CLIENT] Request failed after %d attempts: %v", c.maxRetries+1, err)
+				return nil, err
+			}
+			log.Printf("[CLIENT] Request failed with status %d after %d attempts", resp.StatusCode, c.maxRetries+1)
+			return resp, nil
+		}
+
+		// Calculate delay with exponential backoff
+		delay := c.retryDelay * time.Duration(1<<uint(attempt))
+		if delay > 5*time.Second {
+			delay = 5 * time.Second
+		}
+
+		if err != nil {
+			log.Printf("[CLIENT] Request failed (attempt %d/%d): %v, retrying in %v...", attempt+1, c.maxRetries+1, err, delay)
+		} else {
+			log.Printf("[CLIENT] Request returned %d (attempt %d/%d), retrying in %v...", resp.StatusCode, attempt+1, c.maxRetries+1, delay)
+			resp.Body.Close()
+		}
+
+		time.Sleep(delay)
+	}
+
+	return resp, err
 }
 
 // HealthCheck checks if the server is running
@@ -62,7 +108,7 @@ func (c *ServerClient) RegisterUser(user *models.User) error {
 		req.Header.Set("X-Bot-Secret", c.botSecret)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(req)
 	if err != nil {
 		return err
 	}
@@ -90,7 +136,7 @@ func (c *ServerClient) GetUserProfile(telegramID int64) (*models.UserProfile, er
 		req.Header.Set("X-Bot-Secret", c.botSecret)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(req)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +177,7 @@ func (c *ServerClient) ProcessReferral(referrerID, referredID int64) (*models.Re
 		httpReq.Header.Set("X-Bot-Secret", c.botSecret)
 	}
 
-	resp, err := c.httpClient.Do(httpReq)
+	resp, err := c.doWithRetry(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +288,7 @@ func (c *ServerClient) UpdateJobStatus(jobID uint, status string) error {
 		req.Header.Set("X-Bot-Secret", c.botSecret)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(req)
 	if err != nil {
 		return err
 	}

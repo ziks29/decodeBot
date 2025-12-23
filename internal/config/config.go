@@ -14,6 +14,7 @@ type Config struct {
 	MiniAppURL  string
 	Debug       bool
 	AdminID     int64
+	WebhookPort string // Port for webhook HTTP server
 }
 
 func Load() *Config {
@@ -28,6 +29,11 @@ func Load() *Config {
 		adminID = 41361615 // Default fallback
 	}
 
+	webhookPort := os.Getenv("WEBHOOK_PORT")
+	if webhookPort == "" {
+		webhookPort = "8082" // Default webhook port
+	}
+
 	cfg := &Config{
 		BotToken:    os.Getenv("BOT_TOKEN"),
 		BotUsername: os.Getenv("BOT_USERNAME"),
@@ -36,6 +42,7 @@ func Load() *Config {
 		MiniAppURL:  os.Getenv("MINI_APP_URL"),
 		Debug:       debug,
 		AdminID:     adminID,
+		WebhookPort: webhookPort,
 	}
 
 	if cfg.BotToken == "" {
