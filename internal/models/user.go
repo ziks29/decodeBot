@@ -33,3 +33,8 @@ type ReferralResponse struct {
 	ShardsAwarded int    `json:"shards_awarded"`
 	Message       string `json:"message"`
 }
+
+type UserStats struct {
+	TotalUsers    int `json:"total_users"`
+	ActiveUsers7d int `json:"active_users_7d"`
+}

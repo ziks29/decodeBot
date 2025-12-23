@@ -56,7 +56,7 @@ func main() {
 	// Register command handlers
 	b.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
-			log.Printf("📥 Received update: %s | Text: %s", c.Update().ID, c.Text())
+			log.Printf("📥 Received update: %d | Text: %s", c.Update().ID, c.Text())
 			return next(c)
 		}
 	})
@@ -82,9 +82,13 @@ func main() {
 	sched := scheduler.NewScheduler(b, serverClient)
 	sched.Start()
 
+	// Send startup notification to admin
+	bot.SendStartupNotification(b, serverClient, cfg.AdminID)
+
 	log.Println("🤖 Bot is running...")
 	log.Println("Press Ctrl+C to stop")
 
 	// Start bot
 	b.Start()
+
 }

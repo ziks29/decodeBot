@@ -253,3 +253,36 @@ func (c *ServerClient) UpdateJobStatus(jobID uint, status string) error {
 	}
 	return nil
 }
+
+// GetUserStats fetches user statistics from the server
+func (c *ServerClient) GetUserStats() (*models.UserStats, error) {
+	url := c.baseURL + "/api/bot/stats"
+	log.Printf("[CLIENT] GET %s", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.botSecret != "" {
+		req.Header.Set("X-Bot-Secret", c.botSecret)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		log.Printf("[CLIENT] Request failed: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	log.Printf("[CLIENT] Response status: %s", resp.Status)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get user stats: %d", resp.StatusCode)
+	}
+
+	var stats models.UserStats
+	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}
