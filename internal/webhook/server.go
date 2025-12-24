@@ -98,7 +98,7 @@ func (s *Server) handleNewUser(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"message": "Welcome message sent",
 	})
-	})
+
 }
 
 // handleReferral handles incoming referral notifications from the backend
@@ -130,7 +130,7 @@ func (s *Server) handleReferral(w http.ResponseWriter, r *http.Request) {
 	// Send notification message
 	message := fmt.Sprintf("🚀 User **%s** just joined via your invite link!\n\n💎 You received +20 Shards!", req.ReferredName)
 	recipient := &tele.User{ID: req.ReferrerID}
-	
+
 	if _, err := s.bot.Send(recipient, message, tele.ModeMarkdown); err != nil {
 		log.Printf("[WEBHOOK] Failed to send referral message to user %d: %v", req.ReferrerID, err)
 		// We perform a best-effort, so we don't return error to the server if the user blocked the bot
